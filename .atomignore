@@ -1,0 +1,18 @@
+####################################
+## .hidden file for Atom Editor (https://atom.io/)
+## Plugin for feature: tree-ignore
+####################################
+
+# Project root
+.git*
+.idea
+.hidden
+.swagger-codegen-ignore
+.htaccess
+config-example.php
+composer.*
+LICENSE
+vendor
+
+# db
+db/db.example.php
