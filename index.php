@@ -17,6 +17,7 @@ require_once PROOT . '/model/FroodyEntry.php';
 require_once PROOT . '/model/FroodyUser.php';
 require_once PROOT . '/model/ResponseEntryAdd.php';
 require_once PROOT . '/model/ResponseOk.php';
+require_once PROOT . '/model/ServerOverallStats.php';
 
 require_once PROOT . '/util/FormatUtil.php';
 require_once PROOT . '/util/Geohash.php';
@@ -153,6 +154,16 @@ $app->GET('/block/info', function ($request, $response, $args) {
     } else {
         return writeResponse($response, $ret);
     }
+});
+
+/**
+ * GET blockRandomGet
+ * Summary:
+ * Notes: Entry[ ] ** Entries of multiple random (+complete) blocks
+ * Output-Formats: [application/json]
+ */
+$app->GET('/froody/block/random', function($request, $response, $args) {
+
 });
 
 
@@ -462,6 +473,51 @@ $app->GET('/admin/cleanup', function ($request, $response, $args) {
         return writeResponseOk($response, true);
     }
     return writeResponseOk($response, false);
+});
+
+/**
+ * GET statsOverallGet
+ * Summary:
+ * Notes: Overall statistics
+ * Output-Formats: [application/json]
+ */
+$app->GET('/stats/overall', function($request, $response, $args) {
+    if (($conn = getDB()) === false) {
+        return writeResponseOk($response, false);
+    }
+
+    // Create date time parameter
+    $ret = new ServerOverallStats();
+    $dateTimeThreeWeeksAgo = new DateTime();
+    $dateTimeThreeWeeksAgo->sub(new DateInterval('P21D'));
+    $dateTimeParam = FormatUtil::dateTimeToSQLTimestamp($dateTimeThreeWeeksAgo);
+
+    // Get entry count
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM froody_entry WHERE creationDate >= ? AND wasDeleted=0");
+    $stmt->bind_param("s", $dateTimeParam);
+    if ($stmt->execute()){
+        $stmt->bind_result($ret->entryCount);
+        $stmt->fetch();
+    }
+
+    // Get user count
+    $stmt->close();
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM froody_user WHERE checkDate >= ?");
+    $stmt->bind_param("s", $dateTimeParam);
+    if ($stmt->execute()){
+        $stmt->bind_result($ret->userCount);
+        $stmt->fetch();
+    }
+    $conn->close();
+
+    if ($ret->userCount === null){
+        $ret->userCount = 0;
+    }
+    if ($ret->entryCount === null){
+        $ret->entryCount = 0;
+    }
+
+    return writeResponse($response, $ret);
 });
 
 function getRandomInt64()
