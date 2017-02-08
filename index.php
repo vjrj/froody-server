@@ -55,10 +55,11 @@ $app->GET('/block/get', function ($request, $response, $args) {
         return writeResponseOk($response, false);
     }
     $geohash = new Geohash($geohash);
-    if (!$geohash->isValidAndHasPrecision(5)) {
+    if (!$geohash->isValidAndHasPrecision(4)) {
         return writeResponseOk($response, false);
     }
-    $geohash->setGeohash($geohash->getWithMaxPrecision(6));
+    $geohash->setGeohash($geohash->getWithMaxPrecision(5));
+
 
     //
     //  Request data from db
@@ -117,10 +118,10 @@ $app->GET('/block/info', function ($request, $response, $args) {
 
     // Check geohash
     $geohash = new Geohash($geohash);
-    if (!$geohash->isValidAndHasPrecision(5)) {
+    if (!$geohash->isValidAndHasPrecision(4)) {
         return writeResponseOk($response, false);
     }
-    $geohash->setGeohash($geohash->getWithMaxPrecision(6));
+    $geohash->setGeohash($geohash->getWithMaxPrecision(5));
 
     // Check datetime (should be RFC3339)
     //$minModDate = "2016-12-28T14:53:17.851Z";    // Example date
@@ -130,22 +131,7 @@ $app->GET('/block/info', function ($request, $response, $args) {
 
     // Init return array
     $ret = [];
-
-    if ($geohash->hasMinPrecision(6)) {
-        // Sub-Block --> Query 1+8 blocks
-        $geohashNbrStrs = $geohash->getNeighbours();
-        foreach ($geohashNbrStrs as $nbrStr) {
-            calcAndAddBlockInfoOfSingleBlockToArray($conn, $nbrStr, $minModDate, $ret);
-        }
-        calcAndAddBlockInfoOfSingleBlockToArray($conn, $geohash->getGeohash(), $minModDate, $ret);
-    } else {
-        // Big-Block --> Query 1 big block
-        /*$blockInfo = getBlockInfoOfSingleBlock($conn, $geohash->getWithMaxPrecision(5), $minModificationDate);
-        if ($blockInfo !== false){
-            array_push($ret, $blockInfo);
-        }*/
-        calcAndAddBlockInfoOfSingleBlockToArray($conn, $geohash->getGeohash(), $minModDate, $ret);
-    }
+    calcAndAddBlockInfoOfSingleBlockToArray($conn, $geohash->getGeohash(), $minModDate, $ret);
 
     $conn->close();
 
@@ -157,15 +143,46 @@ $app->GET('/block/info', function ($request, $response, $args) {
 });
 
 /**
- * GET blockRandomGet
+ * GET blockInfoRandomGet
  * Summary:
- * Notes: Entry[ ] ** Entries of multiple random (+complete) blocks
+ * Notes: Entry[ ] ** Get informations about random geohashes
  * Output-Formats: [application/json]
  */
-$app->GET('/froody/block/random', function($request, $response, $args) {
+$app->GET('/block/info/random', function ($request, $response, $args) {
+    if (($conn = getDB()) === false) {
+        return writeResponseOk($response, false);
+    }
 
+    // Prepare statement
+    $ret = [];
+    $stmt = $conn->prepare('
+         SELECT DISTINCT SUBSTRING(geohash, 1,5)
+         FROM froody_entry AS r1 JOIN
+             (SELECT CEIL(RAND() * (SELECT MAX(entryId)
+             FROM froody_entry)) AS id) AS r2
+          WHERE r1.entryId >= r2.id AND r1.wasDeleted=0
+          LIMIT 5');
+    if ($stmt->execute()) {
+        $rndGeohash = null;
+        $stmt->store_result();
+        $stmt->bind_result($rndGeohash);
+
+        $dateTimeThreeWeeksAgo = new DateTime();
+        $dateTimeThreeWeeksAgo->sub(new DateInterval('P21D'));
+
+        while ($stmt->fetch()) {
+            calcAndAddBlockInfoOfSingleBlockToArray($conn, $rndGeohash, $dateTimeThreeWeeksAgo, $ret);
+        }
+    }
+
+    // Write Response
+    $conn->close();
+    if (empty($ret)) {
+        return writeResponseOk($response, false);
+    } else {
+        return writeResponse($response, $ret);
+    }
 });
-
 
 function calcAndAddBlockInfoOfSingleBlockToArray($conn, $geohash, $minModificationDate, &$arr)
 {
@@ -481,7 +498,7 @@ $app->GET('/admin/cleanup', function ($request, $response, $args) {
  * Notes: Overall statistics
  * Output-Formats: [application/json]
  */
-$app->GET('/stats/overall', function($request, $response, $args) {
+$app->GET('/stats/overall', function ($request, $response, $args) {
     if (($conn = getDB()) === false) {
         return writeResponseOk($response, false);
     }
@@ -495,7 +512,7 @@ $app->GET('/stats/overall', function($request, $response, $args) {
     // Get entry count
     $stmt = $conn->prepare("SELECT COUNT(*) FROM froody_entry WHERE creationDate >= ? AND wasDeleted=0");
     $stmt->bind_param("s", $dateTimeParam);
-    if ($stmt->execute()){
+    if ($stmt->execute()) {
         $stmt->bind_result($ret->entryCount);
         $stmt->fetch();
     }
@@ -504,19 +521,19 @@ $app->GET('/stats/overall', function($request, $response, $args) {
     $stmt->close();
     $stmt = $conn->prepare("SELECT COUNT(*) FROM froody_user WHERE checkDate >= ?");
     $stmt->bind_param("s", $dateTimeParam);
-    if ($stmt->execute()){
+    if ($stmt->execute()) {
         $stmt->bind_result($ret->userCount);
         $stmt->fetch();
     }
-    $conn->close();
 
-    if ($ret->userCount === null){
+    // Write response
+    $conn->close();
+    if ($ret->userCount === null) {
         $ret->userCount = 0;
     }
-    if ($ret->entryCount === null){
+    if ($ret->entryCount === null) {
         $ret->entryCount = 0;
     }
-
     return writeResponse($response, $ret);
 });
 
@@ -532,6 +549,7 @@ function getRandomInt32()
 
 /**
  * Check if a user with the passed Id exists
+ * Requires an opened database connection
  *
  * @param mysqli $conn
  * @param int    $userId
@@ -543,10 +561,9 @@ function checkUser($conn, $userId)
     $stmt = $conn->prepare('UPDATE froody_user SET checkDate=UTC_TIMESTAMP() WHERE userId=?');
     $stmt->bind_param('i', $userId);
     if ($stmt->execute() && $stmt->affected_rows > 0) {
-        $conn->close();
         return true;
     }
-    $conn->close();
+
     return false;
 }
 
