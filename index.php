@@ -274,7 +274,7 @@ $app->POST('/entry/add', function ($request, $response, $args) {
     $geohash = new Geohash($geohash);
 
 
-    if ($entryType >= 0 && $geohash->isValidAndHasPrecision(9) && doesUserExists($conn, $userId)) {
+    if ($entryType >= 0 && $geohash->isValidAndHasPrecision(9) && checkUser($conn, $userId)) {
         $managementCode = getRandomInt32();
         $stmt = $conn->prepare('
             INSERT INTO froody_entry
@@ -427,7 +427,7 @@ $app->GET('/user/isEnabled', function ($request, $response, $args) {
     if (($conn = getDB()) === false) {
         return writeResponseOk($response, false);
     }
-    $isEnabled = doesUserExists($conn, $userId);
+    $isEnabled = checkUser($conn, $userId);
 
     $ret = ResponseOk::create($isEnabled);
 
@@ -482,14 +482,16 @@ function getRandomInt32()
  *
  * @return bool
  */
-function doesUserExists($conn, $userId)
+function checkUser($conn, $userId)
 {
-    $stmt = $conn->prepare('SELECT userId FROM froody_user WHERE userId=? LIMIT 1');
+    $stmt = $conn->prepare('UPDATE froody_user SET checkDate=UTC_TIMESTAMP() WHERE userId=?');
     $stmt->bind_param('i', $userId);
-    $stmt->execute();
-    $stmt->store_result();
-
-    return $stmt->num_rows === 1;
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        $conn->close();
+        return true;
+    }
+    $conn->close();
+    return false;
 }
 
 /**
