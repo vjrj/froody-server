@@ -597,6 +597,7 @@ function writeResponse($response, $objectToBeJsonConverted, $httpStatusCode = 20
     return $response
         ->withStatus($httpStatusCode)
         ->withHeader('Content-type', 'application/json')
+        ->withHeader('Access-Control-Allow-Origin', '*')
         ->write(json_encode($objectToBeJsonConverted));
 }
 
