@@ -167,11 +167,11 @@ $app->GET('/block/info/random', function ($request, $response, $args) {
         $stmt->store_result();
         $stmt->bind_result($rndGeohash);
 
-        $dateTimeThreeWeeksAgo = new DateTime();
-        $dateTimeThreeWeeksAgo->sub(new DateInterval('P21D'));
+        $dateTimeDaysAgo = new DateTime();
+        $dateTimeDaysAgo->sub(new DateInterval('P60D'));
 
         while ($stmt->fetch()) {
-            calcAndAddBlockInfoOfSingleBlockToArray($conn, $rndGeohash, $dateTimeThreeWeeksAgo, $ret);
+            calcAndAddBlockInfoOfSingleBlockToArray($conn, $rndGeohash, $dateTimeDaysAgo, $ret);
         }
     }
 
@@ -482,9 +482,9 @@ $app->GET('/admin/cleanup', function ($request, $response, $args) {
 
 
     $stmt = $conn->prepare("DELETE FROM froody_entry WHERE creationDate <= ?");
-    $dateTimeThreeWeeksAgo = new DateTime();
-    $dateTimeThreeWeeksAgo->sub(new DateInterval('P21D'));
-    $dateTimeParam = FormatUtil::dateTimeToSQLTimestamp($dateTimeThreeWeeksAgo);
+    $dateTimeDaysAgo = new DateTime();
+    $dateTimeDaysAgo->sub(new DateInterval('P60D'));
+    $dateTimeParam = FormatUtil::dateTimeToSQLTimestamp($dateTimeDaysAgo);
     $stmt->bind_param("s", $dateTimeParam);
     if ($stmt->execute()) {
         return writeResponseOk($response, true);
@@ -505,9 +505,9 @@ $app->GET('/stats/overall', function ($request, $response, $args) {
 
     // Create date time parameter
     $ret = new ServerOverallStats();
-    $dateTimeThreeWeeksAgo = new DateTime();
-    $dateTimeThreeWeeksAgo->sub(new DateInterval('P21D'));
-    $dateTimeParam = FormatUtil::dateTimeToSQLTimestamp($dateTimeThreeWeeksAgo);
+    $dateTimeDaysAgo = new DateTime();
+    $dateTimeDaysAgo->sub(new DateInterval('P60D'));
+    $dateTimeParam = FormatUtil::dateTimeToSQLTimestamp($dateTimeDaysAgo);
 
     // Get entry count
     $stmt = $conn->prepare("SELECT COUNT(*) FROM froody_entry WHERE creationDate >= ? AND wasDeleted=0");
