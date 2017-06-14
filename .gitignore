@@ -11,3 +11,4 @@ config.php
 .Trashes
 thumbs.db
 vendor
+.htaccess

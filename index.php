@@ -149,9 +149,11 @@ $app->GET('/block/info', function ($request, $response, $args) {
  * Output-Formats: [application/json]
  */
 $app->GET('/block/info/random', function ($request, $response, $args) {
+    $appSettings = getSettings();
     if (($conn = getDB()) === false) {
         return writeResponseOk($response, false);
     }
+    $randomCount = (int) $appSettings['block']['info_random'];
 
     // Prepare statement
     $ret = [];
@@ -161,7 +163,7 @@ $app->GET('/block/info/random', function ($request, $response, $args) {
              (SELECT CEIL(RAND() * (SELECT MAX(entryId)
              FROM froody_entry)) AS id) AS r2
           WHERE r1.entryId >= r2.id AND r1.wasDeleted=0
-          LIMIT 5');
+          LIMIT ' . $randomCount);
     if ($stmt->execute()) {
         $rndGeohash = null;
         $stmt->store_result();
@@ -412,7 +414,7 @@ $app->GET('/entry/delete', function ($request, $response, $args) {
     if ($stmt->num_rows === 1) {
         $stmt = $conn->prepare('
             UPDATE froody_entry
-            SET wasDeleted=1, modificationDate=UTC_TIMESTAMP()
+            SET wasDeleted=1, modificationDate=UTC_TIMESTAMP(), entryType=0, contact="", description="", address=""
             WHERE entryId=? LIMIT 1');
         $stmt->bind_param('i', $entryId);
         if ($stmt->execute()) {

@@ -2,7 +2,7 @@
 
 Server part of the [Froody](https://froodyapp.github.io) application.  
 Developed and maintained by [Gregor Santner](<https://gsantner.github.io>), 2016-  
-License: **GPLv3**  
+License: **Apache 2.0**  
 
 ### Description
 * Written in PHP, using the Slim framework
@@ -12,4 +12,6 @@ License: **GPLv3**
 ### Development & Installation
 * MySql scheme: <https://github.com/froodyapp/froody-extras>
 * Copy and add details to `config-example.php` --> `config.php`
+* Install dependencies with `composer`
+* Place e.g. in `/var/www/froody`, allow overides via apache config
 * API-Doc-Source (Swagger): <https://github.com/froodyapp/froody-extras>

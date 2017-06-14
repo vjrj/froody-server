@@ -12,6 +12,9 @@ return [
         'maxlen_contact' => 200,
         'maxlen_address' => 200,
     ],
+    'block' => [
+        'info_random' => 10,
+    ],
     'admin' => [
         'adminCode' => 'verymuchadminwow',
     ],
