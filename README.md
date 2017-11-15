@@ -1,7 +1,9 @@
 ## ![Froody](https://avatars1.githubusercontent.com/u/24797651?v=3&s=48) Froody-Server
 
+**Notice:** Development halted. See <https://github.com/froodyapp/froody-android/wiki/Thanks>
+
 Server part of the [Froody](https://froodyapp.github.io) application.  
-Developed and maintained by [Gregor Santner](<https://gsantner.github.io>), 2016-  
+Developed and maintained by [Gregor Santner](<https://gsantner.github.io>), 2016-2017  
 License: **Apache 2.0**  
 
 ### Description
